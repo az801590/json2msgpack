@@ -1,3 +1,7 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <json.h>
+
 #include "json2msgpack.h"
 
 static void toBigEndian(void *data, size_t size)

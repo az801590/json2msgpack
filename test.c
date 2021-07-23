@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <json.h>
+
 #include "json2msgpack.h"
 
 int main(int argc, char *argv[])
