@@ -1,4 +1,11 @@
 # json2msgpack
+A json to messagepack format converter.
 
-## Pre-Install
-[json-c]()
+## Prequisites
+- [json-c](https://github.com/json-c/json-c)
+
+##Future Plan
+- Improve the project code.
+- Define int format family using string operation.
+- Support ext format family.
+- Implement messagepack to json format.

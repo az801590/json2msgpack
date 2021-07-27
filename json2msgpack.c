@@ -4,6 +4,20 @@
 
 #include "json2msgpack.h"
 
+enum INT_TYPE
+{
+	__FIXINT__,
+	__N_FIXINT__,
+	__UINT8__,
+	__UINT16__,
+	__UINT32__,
+	__UINT64__,
+	__INT8__,
+	__INT16__,
+	__INT32__,
+	__INT64__
+};
+
 static void toBigEndian(void *data, size_t size)
 {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -166,6 +180,82 @@ int writeStringFormat(size_t length, FILE *f)
 	return 0;
 }
 
+enum INT_TYPE getIntType(const void *integer)
+{
+#ifdef __amd64__
+	int64_t value = *(int64_t*)integer;
+#elif defined __i386__
+	int32_t value = *(int32_t*)integer;
+#else
+	int value = *(int*)integer;
+#endif
+
+	if(value >= 0)
+	{
+		if(value < (1 << 7))
+		{
+			return __FIXINT__;
+		}
+		else if(value < (1 << 8))
+		{
+			return __UINT8__;
+		}
+		else if(value < (1 << 16))
+		{
+			return __UINT16__;
+		}
+#ifdef __amd64__
+		else if(value < 4294967296)
+		{
+			//4294967296 = 2^32
+			return __UINT32__;
+		}
+		else
+		{
+			//uint64 or int64
+			return __UINT64__;
+		}
+#elif defined __i386__
+		else
+		{
+			//int32 or uint32
+			return __UINT32__;
+		}
+#endif
+	}
+	else
+	{
+		if(value >= -(1 << 5))
+		{
+			return __N_FIXINT__;
+		}
+		else if(value >= -(1 << 7))
+		{
+			return __INT8__;
+		}
+		else if(value >= -(1 << 15))
+		{
+			return __INT16__;
+		}
+#ifdef __amd64__
+		else if(value >= -2147483648)
+		{
+			//-2147483648 = -(2^31)
+			return __INT32__;
+		}
+		else
+		{
+			return __INT64__;
+		}
+#elif defined __i386__
+		else
+		{
+			return __INT32__;
+		}
+#endif
+	}
+}
+
 void json2msgpack(json_object *input, FILE *f)
 {
 	json_type type = json_object_get_type(input);
@@ -259,6 +349,7 @@ void json2msgpack(json_object *input, FILE *f)
 		json2msgpack(json_object_new_string(json_object_iter_peek_name(&it)), f);
 		//value
 		json2msgpack(json_object_iter_peek_value(&it), f);
+
 		json_object_iter_next(&it);
 	}
 }
