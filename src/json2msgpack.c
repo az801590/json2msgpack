@@ -183,29 +183,29 @@ int writeStringFormat(size_t length, FILE *f)
 enum INT_TYPE getIntType(const void *integer)
 {
 #ifdef __amd64__
-	int64_t value = *(int64_t*)integer;
+	int64_t value = *(int64_t *)integer;
 #elif defined __i386__
-	int32_t value = *(int32_t*)integer;
+	int32_t value = *(int32_t *)integer;
 #else
-	int value = *(int*)integer;
+	int value = *(int *)integer;
 #endif
 
-	if(value >= 0)
+	if (value >= 0)
 	{
-		if(value < (1 << 7))
+		if (value < (1 << 7))
 		{
 			return __FIXINT__;
 		}
-		else if(value < (1 << 8))
+		else if (value < (1 << 8))
 		{
 			return __UINT8__;
 		}
-		else if(value < (1 << 16))
+		else if (value < (1 << 16))
 		{
 			return __UINT16__;
 		}
 #ifdef __amd64__
-		else if(value < 4294967296)
+		else if (value < 4294967296)
 		{
 			//4294967296 = 2^32
 			return __UINT32__;
@@ -221,24 +221,29 @@ enum INT_TYPE getIntType(const void *integer)
 			//int32 or uint32
 			return __UINT32__;
 		}
+#else
+		else
+		{
+			return __UINT32__;
+		}
 #endif
 	}
 	else
 	{
-		if(value >= -(1 << 5))
+		if (value >= -(1 << 5))
 		{
 			return __N_FIXINT__;
 		}
-		else if(value >= -(1 << 7))
+		else if (value >= -(1 << 7))
 		{
 			return __INT8__;
 		}
-		else if(value >= -(1 << 15))
+		else if (value >= -(1 << 15))
 		{
 			return __INT16__;
 		}
 #ifdef __amd64__
-		else if(value >= -2147483648)
+		else if (value >= -2147483648)
 		{
 			//-2147483648 = -(2^31)
 			return __INT32__;
@@ -254,6 +259,44 @@ enum INT_TYPE getIntType(const void *integer)
 		}
 #endif
 	}
+}
+
+int writeIntFormat(enum INT_TYPE type, FILE *f)
+{
+	uint8_t format = 0xcc + type - __UINT8__;
+	if(format >= 0xcc)
+	{
+		fwrite(&format, sizeof(format), 1, f);
+	}
+	return 0;
+}
+
+int writeIntValue(void* value, enum INT_TYPE type, FILE *f)
+{
+	size_t size = 0;
+	if(type == __FIXINT__ || type == __N_FIXINT__ || type == __UINT8__ || type == __INT8__)
+	{
+		size = sizeof(uint8_t);
+	}
+	else if(type == __UINT16__ || type == __INT16__)
+	{
+		size = sizeof(uint16_t);
+		toBigEndian(value, size);
+	}
+	else if(type == __UINT32__ || type == __INT32__)
+	{
+		size = sizeof(uint32_t);
+		toBigEndian(value, size);
+	}
+	else
+	{
+		//__UINT64__ , __INT64__
+		size = sizeof(uint64_t);
+		toBigEndian(value, size);
+	}
+	fwrite(value, size, 1, f);
+
+	return 0;
 }
 
 void json2msgpack(json_object *input, FILE *f)
@@ -318,25 +361,29 @@ void json2msgpack(json_object *input, FILE *f)
 	else
 	{
 		//json_type_int
-		uint8_t format = 0;
+		//uint8_t format = 0;
 #ifdef __amd64__
 		int64_t value = json_object_get_int64(input);
-		format = 0xd3;
+		//format = 0xd3;
 #elif defined __i386__
 		int32_t value = json_object_get_int(input);
-		format = 0xd2;
+		//format = 0xd2;
 #else
 		int value = json_object_get_int(input);
-		format = 0xd2;
+		//format = 0xd2;
 #endif
 
+/*
 		fwrite(&format, sizeof(format), 1, f);
 
-		/*
-		** always save as 32/64 signed integer
-		*/
+		// always save as 32/64 signed integer
 		toBigEndian(&value, sizeof(value));
 		fwrite(&value, sizeof(value), 1, f);
+*/
+		enum INT_TYPE type = getIntType(&value);
+		writeIntFormat(type, f);
+		writeIntValue(&value, type, f);
+
 		return;
 	}
 
