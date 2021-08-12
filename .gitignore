@@ -2,3 +2,4 @@
 makefile
 *.out
 *.o
+json2msgpack
