@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdint.h>
 #include <json.h>
 
@@ -51,59 +50,53 @@ msgpack_object *json_object_to_msgpack_object(msgpack_object *parent, json_objec
 		return NULL;
 	}
 
-	msgpack_object *out = msgpack_object_create();
 	json_type type = json_object_get_type(input);
+	msgpack_object *out = msgpack_object_create();
 
 	if (type == json_type_object)
 	{
-		msgpack_object_data_set(out, NULL, 0, json_object_object_length(input), MSGPACK_TYPE_MAP);
+		set_msgpack_object_data(out, NULL, 0, json_object_object_length(input), MSGPACK_TYPE_MAP);
 	}
 	else if (type == json_type_array)
 	{
-		msgpack_object_data_set(out, NULL, 0, json_object_array_length(input), MSGPACK_TYPE_ARR);
+		set_msgpack_object_data(out, NULL, 0, json_object_array_length(input), MSGPACK_TYPE_ARR);
 	}
 	else if (type == json_type_string)
 	{
-		msgpack_object_data_set(out, json_object_get_string(input), json_object_get_string_len(input), json_object_get_string_len(input), MSGPACK_TYPE_STR);
+		set_msgpack_object_data(out, json_object_get_string(input), json_object_get_string_len(input), json_object_get_string_len(input), MSGPACK_TYPE_STR);
 	}
 	else if (type == json_type_null)
 	{
-		msgpack_object_data_set(out, NULL, 0, 0, MSGPACK_TYPE_NIL);
+		set_msgpack_object_data(out, NULL, 0, 0, MSGPACK_TYPE_NIL);
 	}
 	else if (type == json_type_boolean)
 	{
 		if (!json_object_get_boolean(input))
 		{
-			msgpack_object_data_set(out, NULL, 0, 0, MSGPACK_TYPE_FALSE);
+			set_msgpack_object_data(out, NULL, 0, 0, MSGPACK_TYPE_FALSE);
 		}
 		else
 		{
-			msgpack_object_data_set(out, NULL, 0, 0, MSGPACK_TYPE_TRUE);
+			set_msgpack_object_data(out, NULL, 0, 0, MSGPACK_TYPE_TRUE);
 		}
 	}
 	else if (type == json_type_double)
 	{
 		double value = json_object_get_double(input);
-		msgpack_object_data_set(out, &value, sizeof(value), 1, MSGPACK_TYPE_DOUBLE);
+		set_msgpack_object_data(out, &value, sizeof(value), 1, MSGPACK_TYPE_DOUBLE);
 	}
 	else
 	{
 		//json_type_int
 		int64_t value = json_object_get_int64(input);
-		msgpack_object_data_set(out, &value, get_int_size(value), 1, get_int_type(value));
+		set_msgpack_object_data(out, &value, get_int_size(value), 1, get_int_type(value));
 	}
 
-	if (parent)
+	// in json, there is always a root node, which type is map or array.
+	// if parent is null, the current node is the root node.
+	if(parent)
 	{
-		if (parent->data != NULL)
-		{
-			out->next = parent->data;
-			out->last = ((msgpack_object *)parent->data)->last;
-			((msgpack_object *)(parent->data))->last->next = out;
-			((msgpack_object *)parent->data)->last = out;
-		}
-
-		parent->data = out;
+		parent->data = add_msgpack_object_to_list(parent->data, out);
 	}
 
 	if (type == json_type_object)
@@ -140,7 +133,11 @@ write_buff *json_to_msgpack_write_buff(json_object *input)
 		return NULL;
 	}
 
-	return get_msgpack_write_buff(NULL, json_object_to_msgpack_object(NULL, input));
+	msgpack_object *msgp = json_object_to_msgpack_object(NULL, input);
+	write_buff *buff = get_msgpack_write_buff(NULL, msgp);
+	
+	msgpack_object_free(msgp);
+	return buff;
 }
 
 void *json_file_to_msgpack_binary(int fd, size_t *size)
@@ -152,17 +149,21 @@ void *json_file_to_msgpack_binary(int fd, size_t *size)
 
 	json_object *input = json_object_from_fd(fd);
 	write_buff *buff = NULL;
+	void *output = NULL;
 
-	if (buff = json_to_msgpack_write_buff(input))
+	if ((buff = json_to_msgpack_write_buff(input)))
 	{
 		*size = buff->offset;
-		return buff->data;
+		output = buff->data;
 	}
 	else
 	{
 		*size = 0;
 		return NULL;
 	}
+
+	write_buff_free(buff);
+	return output;
 }
 
 void *json_string_to_msgpack_binary(char *string, size_t *size)
@@ -174,15 +175,20 @@ void *json_string_to_msgpack_binary(char *string, size_t *size)
 
 	json_object *input = json_tokener_parse(string);
 	write_buff *buff = NULL;
+	void *output = NULL;
 	
-	if (buff = json_to_msgpack_write_buff(input))
+	
+	if ((buff = json_to_msgpack_write_buff(input)))
 	{
+		output = buff->data;
 		*size = buff->offset;
-		return buff->data;
 	}
 	else
 	{
 		*size = 0;
 		return NULL;
 	}
+
+	write_buff_free(buff);
+	return output;
 }

@@ -72,7 +72,7 @@ int write_buff_data_expand(write_buff *buff, size_t inputSize)
     return 1;
 }
 
-int add_write_buff_data(write_buff *buff, msgpack_object *obj)
+int set_write_buff_data(write_buff *buff, msgpack_object *obj)
 {
     if (!write_buff_data_expand(buff, obj->size))
     {
@@ -134,13 +134,23 @@ int add_write_buff_data(write_buff *buff, msgpack_object *obj)
 
 void write_buff_free(write_buff *buff)
 {
-    if(buff)
+    if (buff)
     {
-        if(buff->data)
+        /*
+        if (buff->data)
         {
             free(buff->data);
         }
+        */
         free(buff);
+    }
+}
+
+void write_buff_data_free(write_buff *buff)
+{
+    if(buff && buff->data)
+    {
+        free(buff->data);
     }
 }
 
@@ -156,10 +166,10 @@ write_buff *get_msgpack_write_buff(write_buff *output, msgpack_object *obj)
         output = write_buff_create();
     }
 
-    msgpack_object *ptr = obj->last;
+    msgpack_object *ptr = obj;
     do
     {
-        if (!add_write_buff_data(output, ptr))
+        if (!set_write_buff_data(output, ptr))
         {
             return NULL;
         }
@@ -169,8 +179,8 @@ write_buff *get_msgpack_write_buff(write_buff *output, msgpack_object *obj)
             get_msgpack_write_buff(output, ptr->data);
         }
 
-        ptr = ptr->last;
-    } while (ptr && ptr != obj->last);
+        ptr = ptr->next;
+    } while (ptr && ptr != obj);
 
     return output;
 }

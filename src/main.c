@@ -1,9 +1,10 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <json.h>
 
-#include "json2msgpack.h"
+#include "json_to_msgpack.h"
 
 #define BUFFER_LEN 1024
 
@@ -11,10 +12,12 @@ const char execute[] = "json2msgpack";
 
 static inline void usage()
 {
+	printf("\
+Usage: %s [FILE] ...\n\
+%s convert json file or standard input json format to msgpack formate in standard output.\n\n\
+",
+		   execute, execute);
 	fputs("\
-Usage: json2msgpack [FILE] ...\n\
-json2msgpack convert json file or standard input json format to msgpack formate in standard output.\n\
-\n\
 Arguments:\n\
   -h/--help	display Usage page\n\
 \n",
@@ -23,7 +26,8 @@ Arguments:\n\
 
 int main(int argc, char *argv[])
 {
-	json_object *input;
+	size_t size = 0;
+	void *output = NULL;
 
 	if (argc > 1)
 	{
@@ -46,16 +50,10 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
-					if (input = json_object_from_fd(fd))
+					if (output = json_file_to_msgpack_binary(fd, &size))
 					{
-						json2msgpack(input, stdout);
-						free(input);
-					}
-					else
-					{
-						fprintf(stderr, "%s: Invalid input.\n", execute);
-						close(fd);
-						break;
+						fwrite(output, size, 1, stdout);
+						free(output);
 					}
 
 					close(fd);
@@ -71,14 +69,10 @@ int main(int argc, char *argv[])
 
 		if (fread(buffer, sizeof(char), BUFFER_LEN - 1, stdin) > 0)
 		{
-			if (input = json_tokener_parse(buffer))
+			if (output = json_string_to_msgpack_binary(buffer, &size))
 			{
-				json2msgpack(input, stdout);
-				free(input);
-			}
-			else
-			{
-				fprintf(stderr, "%s: Invalid input.\n", execute);
+				fwrite(output, size, 1, stdout);
+				free(output);
 			}
 		}
 	}

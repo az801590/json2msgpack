@@ -3,3 +3,4 @@ makefile
 *.out
 *.o
 json2msgpack
+src/test.c

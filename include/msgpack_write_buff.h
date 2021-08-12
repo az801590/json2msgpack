@@ -11,5 +11,6 @@ typedef struct
 } write_buff;
 
 write_buff *get_msgpack_write_buff(write_buff *, msgpack_object *);
+void write_buff_free(write_buff *);
 
 #endif

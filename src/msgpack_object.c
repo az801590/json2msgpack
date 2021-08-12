@@ -7,6 +7,7 @@ int msgpack_object_init(msgpack_object *msgp)
 {
     if (msgp->data)
     {
+        //if type == map || array is inappropriate
         free(msgp->data);
     }
 
@@ -74,46 +75,21 @@ int msgpack_object_data_alloc(msgpack_object *obj, size_t size)
     return 1;
 }
 
-size_t msgpack_object_data_set(msgpack_object *msgp, const void *buff, size_t buffSize, size_t buffLen, msgpack_type type)
+size_t set_msgpack_object_data(msgpack_object *msgp, const void *buff, size_t buffSize, size_t buffLen, msgpack_type type)
 {
-    void *tmp = NULL;
-    if (msgp->data)
+    if(!msgpack_object_data_alloc(msgp, buffSize))
     {
-        if (msgp->size >= buffSize)
-        {
-            tmp = msgp->data;
-        }
-        else
-        {
-            free(msgp->data);
-            tmp = calloc(1, buffSize);
-        }
-    }
-    else
-    {
-        if (buffSize > 0)
-        {
-            tmp = calloc(1, buffSize);
-        }
+        return 0;
     }
 
-    if (tmp)
-    {
-        msgp->data = tmp;
-        memcpy(msgp->data, buff, buffSize);
-        msgp->size = buffSize;
-    }
-    else
-    {
-        msgp->size = 0;
-    }
+    memcpy(msgp->data, buff, buffSize);
     msgp->length = buffLen;
     msgp->type = type;
 
     return msgp->size;
 }
 
-msgpack_object *add_msgpack_object(msgpack_object *head, msgpack_object *new)
+msgpack_object *add_msgpack_object_to_list(msgpack_object *head, msgpack_object *new)
 {
     if (head)
     {
@@ -122,9 +98,36 @@ msgpack_object *add_msgpack_object(msgpack_object *head, msgpack_object *new)
 
         head->last->next = new;
         head->last = new;
-    }
 
-    return new;
+        return head;
+    }
+    else
+    {
+        return new;
+    }
+}
+
+void msgpack_object_free(msgpack_object *obj)
+{
+    if(obj)
+    {
+        obj->last->next = NULL;
+
+        if(obj->type == MSGPACK_TYPE_ARR || obj->type == MSGPACK_TYPE_MAP)
+        {
+            msgpack_object_free(obj->data);
+        }
+        else
+        {
+            if(obj->data)
+            {
+                free(obj->data);
+            }
+        }
+
+        msgpack_object_free(obj->next);
+        free(obj);
+    }
 }
 
 uint8_t get_msgpack_int_format(msgpack_object *obj)
@@ -201,7 +204,7 @@ uint8_t get_msgpack_string_format(msgpack_object *obj)
     {
         return 0xda;
     }
-    else if (obj->length <= (4294967295))
+    else /*if (obj->length <= (4294967295))*/
     {
         return 0xdb;
     }
@@ -221,7 +224,7 @@ uint8_t get_msgpack_array_format(msgpack_object *obj)
     {
         return 0xdc;
     }
-    else if (obj->length <= (4294967295))
+    else /*if (obj->length <= (4294967295))*/
     {
         return 0xdd;
     }
@@ -242,7 +245,7 @@ uint8_t get_msgpack_map_format(msgpack_object *obj)
     {
         return 0xde;
     }
-    else if (obj->length <= ((4294967295)))
+    else /*if (obj->length <= ((4294967295)))*/
     {
         return 0xdf;
     }
@@ -279,6 +282,7 @@ uint8_t get_msgpack_object_format(msgpack_object *obj)
         case MSGPACK_TYPE_BIN:
         case MSGPACK_TYPE_EXT:
         case MSGPACK_TYPE_TIME:
+        default:
             //unfinished
             return MSGPACK_FORMAT_NEVER_USED;
     }

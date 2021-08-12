@@ -21,6 +21,7 @@ typedef enum
     MSGPACK_TYPE_EXT,
     MSGPACK_TYPE_TIME
 } msgpack_type;
+
 /*
 typedef enum
 {
@@ -36,6 +37,7 @@ typedef enum
     MSGPACK_INT_INT64
 } msgpack_int_type;
 */
+
 typedef struct MSGPACK_OBJECT
 {
     void *data;
@@ -48,8 +50,9 @@ typedef struct MSGPACK_OBJECT
 } msgpack_object;
 
 msgpack_object *msgpack_object_create();
-size_t msgpack_object_data_set(msgpack_object *,const void *, size_t, size_t, msgpack_type);
-msgpack_object *add_msgpack_object(msgpack_object *, msgpack_object *);
+size_t set_msgpack_object_data(msgpack_object *,const void *, size_t, size_t, msgpack_type);
+msgpack_object *add_msgpack_object_to_list(msgpack_object *, msgpack_object *);
 uint8_t get_msgpack_object_format(msgpack_object *);
+void msgpack_object_free(msgpack_object *);
 
 #endif
