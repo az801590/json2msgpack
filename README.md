@@ -6,5 +6,6 @@ A json to messagepack format converter.
 
 ## Future Work
 - Improve the project code.
+- Error handling
 - Support ext format family.
 - Implement messagepack to json format.

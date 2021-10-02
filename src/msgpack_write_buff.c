@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <errno.h>
 
 #include "msgpack_object.h"
 #include "msgpack_write_buff.h"
@@ -81,7 +82,7 @@ int set_write_buff_data(write_buff *buff, msgpack_object *obj)
 
     //add format
     uint8_t type = get_msgpack_object_format(obj);
-    if (type && type != MSGPACK_FORMAT_NEVER_USED)
+    if (type && type != MSGPACK_TYPE_NEVER_USED)
     {
         *((uint8_t *)(buff->data + buff->offset)) = type;
         buff->offset += sizeof(type);
@@ -136,19 +137,13 @@ void write_buff_free(write_buff *buff)
 {
     if (buff)
     {
-        /*
-        if (buff->data)
-        {
-            free(buff->data);
-        }
-        */
         free(buff);
     }
 }
 
 void write_buff_data_free(write_buff *buff)
 {
-    if(buff && buff->data)
+    if (buff && buff->data)
     {
         free(buff->data);
     }
@@ -164,6 +159,10 @@ write_buff *get_msgpack_write_buff(write_buff *output, msgpack_object *obj)
     if (!output)
     {
         output = write_buff_create();
+        if (!output)
+        {
+            return NULL;
+        }
     }
 
     msgpack_object *ptr = obj;
@@ -171,15 +170,18 @@ write_buff *get_msgpack_write_buff(write_buff *output, msgpack_object *obj)
     {
         if (!set_write_buff_data(output, ptr))
         {
+            write_buff_data_free(output);
+            output = NULL;
             return NULL;
         }
-
-        if ((ptr->type == MSGPACK_TYPE_MAP || ptr->type == MSGPACK_TYPE_ARR) && ptr->data)
+        else
         {
-            get_msgpack_write_buff(output, ptr->data);
+            if ((ptr->type == MSGPACK_TYPE_MAP || ptr->type == MSGPACK_TYPE_ARR) && ptr->data)
+            {
+                get_msgpack_write_buff(output, ptr->data);
+            }
+            ptr = ptr->next;
         }
-
-        ptr = ptr->next;
     } while (ptr && ptr != obj);
 
     return output;

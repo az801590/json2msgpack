@@ -12,16 +12,10 @@ const char execute[] = "json2msgpack";
 
 static inline void usage()
 {
-	printf("\
-Usage: %s [FILE] ...\n\
-%s convert json file or standard input json format to msgpack formate in standard output.\n\n\
-",
-		   execute, execute);
-	fputs("\
-Arguments:\n\
-  -h/--help	display Usage page\n\
-\n",
-		  stdout);
+	printf("Usage: %s [FILE] ...\n", execute);
+	printf("%s convert json file or standard input json format to msgpack formate in standard output.\n\n", execute);
+	printf("Arguments:\n");
+	printf("\t-h/--help	display Usage page\n\n");
 }
 
 int main(int argc, char *argv[])

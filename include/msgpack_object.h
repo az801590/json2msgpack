@@ -3,8 +3,6 @@
 
 #include <stddef.h>
 
-#define MSGPACK_FORMAT_NEVER_USED 0xc1
-
 typedef enum
 {
     MSGPACK_TYPE_NIL,
@@ -19,7 +17,8 @@ typedef enum
     MSGPACK_TYPE_ARR,
     MSGPACK_TYPE_MAP,
     MSGPACK_TYPE_EXT,
-    MSGPACK_TYPE_TIME
+    MSGPACK_TYPE_TIME,
+    MSGPACK_TYPE_NEVER_USED
 } msgpack_type;
 
 /*

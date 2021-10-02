@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <json.h>
+#include <errno.h>
 
 #include "msgpack_object.h"
 #include "msgpack_write_buff.h"
@@ -45,13 +46,13 @@ static size_t get_int_size(int64_t value)
 
 msgpack_object *json_object_to_msgpack_object(msgpack_object *parent, json_object *input)
 {
-	if (!input)
+	msgpack_object *out = msgpack_object_create();
+	if(!input || !out)
 	{
 		return NULL;
 	}
 
 	json_type type = json_object_get_type(input);
-	msgpack_object *out = msgpack_object_create();
 
 	if (type == json_type_object)
 	{
@@ -133,10 +134,15 @@ write_buff *json_to_msgpack_write_buff(json_object *input)
 		return NULL;
 	}
 
-	msgpack_object *msgp = json_object_to_msgpack_object(NULL, input);
-	write_buff *buff = get_msgpack_write_buff(NULL, msgp);
+	msgpack_object *msgp = NULL;
+	write_buff *buff = NULL;
 	
-	msgpack_object_free(msgp);
+	if(msgp = json_object_to_msgpack_object(NULL, input))
+	{
+		buff = get_msgpack_write_buff(NULL, msgp);
+		msgpack_object_free(msgp);
+	}
+
 	return buff;
 }
 

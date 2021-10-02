@@ -1,19 +1,21 @@
 #include <memory.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <errno.h>
+
 #include "msgpack_object.h"
 
 int msgpack_object_init(msgpack_object *msgp)
 {
-    if (msgp->data)
+    if(!msgp)
     {
-        //if type == map || array is inappropriate
-        free(msgp->data);
+        return 0;
     }
-
+    
     msgp->data = NULL;
     msgp->size = 0;
     msgp->length = 0;
+    msgp->type = MSGPACK_TYPE_NEVER_USED;
 
     msgp->next = msgp;
     msgp->last = msgp;
@@ -105,6 +107,29 @@ msgpack_object *add_msgpack_object_to_list(msgpack_object *head, msgpack_object 
     {
         return new;
     }
+}
+
+int add_msgpack_pack_to_child(msgpack_object *parent, msgpack_object *new)
+{
+    if(!parent || !new || (parent->type != MSGPACK_TYPE_MAP) || (parent->type != MSGPACK_TYPE_ARR))
+    {
+        return 0;
+    }
+
+    if(parent->data)
+    {
+        new->last = ((msgpack_object*)parent->data)->last;
+        new->next = parent->data;
+
+        ((msgpack_object*)parent->data)->last->next = new;
+        ((msgpack_object*)parent->data)->last = new;
+    }
+    else
+    {
+        parent->data = new;
+    }
+
+    return 1;
 }
 
 void msgpack_object_free(msgpack_object *obj)
@@ -214,6 +239,7 @@ uint8_t get_msgpack_string_format(msgpack_object *obj)
     }
     */
 }
+
 uint8_t get_msgpack_array_format(msgpack_object *obj)
 {
     if (obj->length < (1 << 4))
@@ -282,8 +308,8 @@ uint8_t get_msgpack_object_format(msgpack_object *obj)
         case MSGPACK_TYPE_BIN:
         case MSGPACK_TYPE_EXT:
         case MSGPACK_TYPE_TIME:
-        default:
+        case MSGPACK_TYPE_NEVER_USED:
             //unfinished
-            return MSGPACK_FORMAT_NEVER_USED;
+            return 0xc1;
     }
 }
